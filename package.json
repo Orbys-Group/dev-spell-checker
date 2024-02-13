@@ -1,0 +1,145 @@
+{
+  "name": "dev-spell-checker",
+  "displayName": "Dev Spell Checker",
+  "description": "Una extensión para Visual Studio Code que te ayuda a corregir errores ortográficos y gramaticales en tu código con IA.",
+  "version": "0.0.1",
+  "icon": "resources/logoWhite.png",
+  "engines": {
+    "vscode": "^1.86.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Extension Packs",
+    "Machine Learning",
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Dev Spell Checker",
+      "properties": {
+        "ortografix.openAIKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API Key"
+        },
+        "ortografix.modeloIA": {
+          "type": "string",
+          "default": "gpt-3.5-turbo",
+          "enum": [
+            "gpt-3.5-turbo",
+            "gpt-4"
+          ],
+          "description": "Selecciona el modelo de IA a utilizar."
+        }
+      }
+    },
+    "submenus": [
+      {
+        "id": "ortografix.submenu",
+        "label": "Dev Spell Checker"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "group": "ortografix",
+          "when": "editorHasSelection || !editorHasSelection",
+          "submenu": "ortografix.submenu"
+        }
+      ],
+      "ortografix.submenu": [
+        {
+          "command": "ortografix.checkSpelling",
+          "group": "navigation@1",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "ortografix.clearList",
+          "group": "navigation@2",
+          "when": "editorHasSelection || !editorHasSelection"
+        },
+        {
+          "command": "ortografix.ortografixView",
+          "group": "navigation@4",
+          "when": "editorHasSelection || !editorHasSelection"
+        },
+        {
+          "command": "ortografix.ask",
+          "group": "navigation@3",
+          "when": "editorHasSelection || !editorHasSelection"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "ortografix.checkSpelling",
+        "title": "Corregir selección"
+      },
+      {
+        "command": "ortografix.clearList",
+        "title": "Borrar lista de correcciones"
+      },
+      {
+        "command": "ortografix.ortografixView",
+        "title": "Acerca de Dev Spell Checker"
+      },
+      {
+        "command": "ortografix.ask",
+        "title": "Preguntame algo"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ortografix",
+          "title": "Dev spell checker",
+          "icon": "resources/corrections.svg",
+          "command": "ortografix.ortografixView"
+        }
+      ]
+    },
+    "views": {
+      "ortografix": [
+        {
+          "type": "webview",
+          "id": "ortografix.webview",
+          "name": "Ortografix",
+          "contextualTitle": "Ortografix"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.86.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "@typescript-eslint/parser": "^6.19.1",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.9",
+    "eslint": "^8.56.0",
+    "ts-loader": "^9.4.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.0",
+    "@types/uuid": "^9.0.8"
+  },
+  "dependencies": {
+    "cspell-lib": "^8.3.2",
+    "date-fns": "^3.3.1",
+    "openai": "^4.27.0",
+    "uuid": "^9.0.1"
+  }
+}
