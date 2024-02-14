@@ -1,9 +1,10 @@
 {
   "name": "dev-spell-checker",
+  "publisher": "OrbysGroup",
   "displayName": "Dev Spell Checker",
   "description": "Una extensión para Visual Studio Code que te ayuda a corregir errores ortográficos y gramaticales en tu código con IA.",
-  "version": "0.0.1",
-  "icon": "resources/logoWhite.png",
+  "version": "0.0.3",
+  "icon": "resources/corrections.png",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -14,6 +15,9 @@
     "Other"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onView:ortografixView"
+  ],
   "contributes": {
     "configuration": {
       "title": "Dev Spell Checker",
@@ -31,6 +35,20 @@
             "gpt-4"
           ],
           "description": "Selecciona el modelo de IA a utilizar."
+        },
+        "ortografix.language": {
+          "type": "string",
+          "default": "es",
+          "enum": [
+            "es",
+            "en"
+          ],
+          "description": "Selecciona el idioma a utilizar."
+        },
+        "ortografix.findOnCorrect": {
+          "type": "boolean",
+          "default": false,
+          "description": "Buscar en palabras correctas."
         }
       }
     },
@@ -105,7 +123,7 @@
           "type": "webview",
           "id": "ortografix.webview",
           "name": "Ortografix",
-          "contextualTitle": "Ortografix"
+          "contextualTitle": "Dev Spell Checker"
         }
       ]
     }
@@ -124,6 +142,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "18.x",
+    "@types/uuid": "^9.0.8",
     "@types/vscode": "^1.86.0",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
     "@typescript-eslint/parser": "^6.19.1",
@@ -133,13 +152,19 @@
     "ts-loader": "^9.4.1",
     "typescript": "^5.3.3",
     "webpack": "^5.75.0",
-    "webpack-cli": "^5.0.0",
-    "@types/uuid": "^9.0.8"
+    "webpack-cli": "^5.0.0"
   },
   "dependencies": {
     "cspell-lib": "^8.3.2",
     "date-fns": "^3.3.1",
+    "lit-html": "^3.1.2",
     "openai": "^4.27.0",
+    "tooltip": "^1.6.1",
     "uuid": "^9.0.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Orbys-Group/dev-spell-checker.git"
+  },
+  "license": "MIT"
 }
