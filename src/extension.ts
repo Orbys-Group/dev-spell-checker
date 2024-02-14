@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 let config = vscode.workspace.getConfiguration('ortografix');
 let apiKey = config.get('openAIKey');
 let modeloIA = config.get('modeloIA');
+let findOnCorrect = config.get('findOnCorrect');
+let language = config.get('language');
 
 import { OpenAI } from 'openai';
 import { CorrectionsProvider } from './correctionsProvider';
@@ -13,32 +15,54 @@ const openai = new OpenAI({
     apiKey: apiKey as string,
 });
 
-vscode.workspace.onDidChangeConfiguration(event => {
+const recargar = async () => {
+    const seleccion = await vscode.window.showInformationMessage('La configuración ha cambiado, ¿deseas recargar la ventana para aplicar los cambios?', 'Recargar', 'Cancelar');
+    if (seleccion === 'Recargar') {
+        vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
+};
+
+vscode.workspace.onDidChangeConfiguration(async event => {
     if (event.affectsConfiguration('ortografix.modeloIA')) {
         modeloIA = config.get('modeloIA');
-        vscode.window.showInformationMessage("La configuración del modelo de IA ha cambiado. Si intentas corregir texto, puede que no veas los cambios hasta recargar la ventana.");
+        await recargar();
     }
     if (event.affectsConfiguration('ortografix.openAIKey')) {
         apiKey = config.get('openAIKey');
-        vscode.window.showInformationMessage('La configuración de la API KEY ha cambiado. Si intentas corregir un texto, puede que no veas los cambios hasta que recargues la ventana.');
+        await recargar();
+    }
+    if (event.affectsConfiguration('ortografix.findOnCorrect')) {
+        findOnCorrect = config.get('findOnCorrect');
+        await recargar();
+    }
+    if (event.affectsConfiguration('ortografix.language')) {
+        language = config.get('language');
+        await recargar();
     }
 });
 async function corregirTexto(texto: string) {
+    let prompt = `Eres un experto en gramática y ortografía del idioma español. Tu tarea es ayudarme a corregir textos. Te proporcionaré un texto y 
+    tu deberás devolverme únicamente el texto corregido, agrega las tildes donde sea necesario, solo corregir errores de 
+    ortografía y gramática, y si el texto esta en otro idioma, debes traducirlo a español. No debes agregar puntos al final a menos que el texto original los tenga. Si el texto que te proporciono no requiere 
+    correcciones, debes responder solo con la palabra [OK]. Por ejemplo, si te proporciono el texto "la casa d ppel", tu respuesta debería ser 
+    "La casa de papel". Si te proporciono el texto "la casa de papel", tu respuesta debería ser [OK]`;
+    if (language === 'en') {
+        prompt = `Eres un experto en gramática y ortografía del idioma ingles. Tu tarea es ayudarme a corregir textos. Te proporcionaré un texto y 
+    tu deberás devolverme únicamente el texto corregido, debes corregir errores de 
+    ortografía y gramática y si el texto esta en otro idioma, debes traducirlo a ingles. No debes agregar puntos al final a menos que el texto original los tenga. Si el texto que te proporciono no requiere 
+    correcciones, debes responder solo con la palabra [OK]. Por ejemplo, si te proporciono el texto "la casa d ppel", tu respuesta debería ser 
+    "The Money Heist". Si te proporciono el texto "I am a developer", tu respuesta debería ser [OK]`;
+    }
+    console.log(language);
     const response = await openai.chat.completions.create({
         model: modeloIA as string,
         messages: [
             {
                 "role": "system",
-                "content": `Eres un experto en gramática y ortografía del idioma español. Tu tarea es ayudarme a corregir textos. Te proporcionaré un texto y 
-            tu deberás devolverme únicamente el texto corregido, agrega las tildes donde sea necesario, solo corregir errores de 
-            ortografía y gramática. No debes agregar puntos al final a menos que el texto original los tenga. Si el texto que te proporciono no requiere 
-            correcciones, debes responder solo con la palabra [OK]. Por ejemplo, si te proporciono el texto "la casa d ppel", tu respuesta debería ser 
-            "La casa de papel". Si te proporciono el texto "la casa de papel", tu respuesta debería ser [OK]
-
-            `
+                "content": prompt
             }, {
                 "role": "user",
-                "content": `como debo corregir este ${texto}?`
+                "content": `${texto}`
             }
         ],
     });
@@ -107,27 +131,47 @@ export function activate(context: vscode.ExtensionContext) {
         if (editor) {
             const document = editor.document;
             const selection = editor.selection;
+            const start = selection.start;
+            const end = selection.end;
 
 
             // Get the word within the selection
             const word = document.getText(selection);
-
+            
             // console.log(apiKey);
             // const newText = apiKey;
             const edit = new vscode.WorkspaceEdit();
             // edit.replace(document.uri, selection, newText as string || '');
             // vscode.workspace.applyEdit(edit);
             statusBarItem.show();
+            provider.showLoader();
             const malasPalabras: badWords = globalState.get('malasPalabras') || {};
             if (malasPalabras) {
                 const keys = Object.keys(malasPalabras);
                 for (let i = 0; i < keys.length; i++) {
                     const element = malasPalabras[keys[i]];
-                    if (element.incorrect === word) {
-                        statusBarItem.hide();
-                        edit.replace(document.uri, selection, `${element.correct}` || '');
-                        vscode.workspace.applyEdit(edit);
-                        vscode.window.showInformationMessage(`He usado una palabra o frase que ya corregí anteriormente. Revisa el historial de correcciones para ver la corrección que hice anteriormente.`);
+                    if (element.incorrect === word || (findOnCorrect && element.correct === word)) {
+                        //retardo de 5 segundo para que el loader no se oculte antes de que el usuario pueda verlo
+                        setTimeout(() => {
+                            provider.hideLoader();
+                            statusBarItem.hide();
+                            edit.replace(document.uri, selection, `${element.correct}` || '');
+                            vscode.workspace.applyEdit(edit);
+                            //actualizar el contador
+                            const count = element.count ? element.count + 1 : 1;
+                            //actualizar el estado global
+                            globalState.update('malasPalabras', {
+                                ...globalState.get('malasPalabras'),
+                                [element.id]: {
+                                    ...element,
+                                    count: count,
+                                    restablecida: false
+                                }
+                            });
+                            correctionsProvider.refresh();
+                            provider.updateGlobalState(globalState);
+                            vscode.window.showInformationMessage(`He usado una palabra o frase que ya corregí anteriormente. Revisa el historial de correcciones para ver la corrección que hice anteriormente.`);
+                        }, 1000);
                         return;
                     }
                 }
@@ -157,13 +201,18 @@ export function activate(context: vscode.ExtensionContext) {
                             incorrect: word,
                             date: new Date(),
                             uri: document.uri,
-                            id: id
+                            id: id,
+                            count: 1,
+                            start: start,
+                            end: end,
+                            restablecida: false
                         }
                     });
                     correctionsProvider.refresh();
                     provider.updateGlobalState(globalState);
                 }
                 statusBarItem.hide();
+                provider.hideLoader();
             }).catch((error) => {
                 console.error(error);
             });
@@ -211,8 +260,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('ortografix.webview', () => {
             vscode.window.createWebviewPanel(
-                'chatGPT',
-                'Chat GPT',
+                'panelViewProvider',
+                'Ortografix View',
                 vscode.ViewColumn.One,
                 {
                     enableScripts: true,
