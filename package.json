@@ -3,7 +3,7 @@
   "publisher": "OrbysGroup",
   "displayName": "Dev Spell Checker",
   "description": "Una extensión para Visual Studio Code que te ayuda a corregir errores ortográficos y gramaticales en tu código con IA.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "icon": "resources/corrections.png",
   "engines": {
     "vscode": "^1.86.0"
@@ -155,11 +155,8 @@
     "webpack-cli": "^5.0.0"
   },
   "dependencies": {
-    "cspell-lib": "^8.3.2",
     "date-fns": "^3.3.1",
-    "lit-html": "^3.1.2",
     "openai": "^4.27.0",
-    "tooltip": "^1.6.1",
     "uuid": "^9.0.1"
   },
   "repository": {
